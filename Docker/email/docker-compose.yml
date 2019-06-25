@@ -62,4 +62,4 @@ services:
     networks: 
       - fila
     depends_on:
-      - queue
+      - queue 

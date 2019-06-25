@@ -1,0 +1,65 @@
+version: '3'
+volumes:
+  dados:
+networks: 
+  banco:
+  web:
+  fila:
+services:
+  db:
+    image: postgres:9.6
+    volumes:
+      # Volume dos dados
+      - dados:/var/lib/postgresql/data
+      # Scripts
+      - ./scripts:/scripts
+      - ./scripts/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks: 
+      # Rede utilizada pela iamgem 
+      - banco
+  frontend:
+    image: nginx:1.13
+    volumes:
+      # Site
+      - ./web:/usr/share/nginx/html
+      # Configuração proxy reverso
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
+    ports:
+      - 80:80
+    networks: 
+      # Rede utilizada pela imagem
+      - web
+    depends_on:
+      # Dependencia das outras imagens 
+      - app
+  app:
+    image: python:3.6
+    volumes: 
+      # Aplicação
+      - ./app:/app
+    working_dir: /app
+    command: bash ./app.sh
+    networks: 
+      # Redes utilizadas pela iamgem 
+      - banco
+      - web
+      - fila
+    depends_on:
+      # Dependencia das outras imagens 
+      - db
+      - queue
+  queue:
+    image: redis:3.2
+    networks: 
+      - fila
+  worker: 
+    image: python:3.6
+    volumes:
+      # Worker
+      - ./worker:/worker
+    working_dir: /worker
+    command: bash ./app.sh
+    networks: 
+      - fila
+    depends_on:
+      - queue
